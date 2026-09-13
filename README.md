@@ -1,11 +1,4 @@
-# Xclipse 940 / Exynos 2400 — Private archive (public-safe)
-
-> This repo is currently **private by choice, not by necessity**.
-> It contains NO vendor binaries and NO raw proprietary dumps, so it CAN go
-> public later as-is. See `PUBLIC_SAFETY.md` + pre-flip checklist before changing
-> visibility. License: MIT for own docs/scripts (`LICENSE`); Samsung blobs are
-> referenced by hash/path only, never redistributed.
-
+# Xclipse 940 / Exynos 2400 
 ## Contents
 
 ```text
