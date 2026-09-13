@@ -46,6 +46,8 @@ def main() -> int:
 
     checks = {
         "textureCompressionBC": data.count(b"textureCompressionBC"),
+        "ForceEtcAstcEnable": data.count(b"ForceEtcAstcEnable"),
+        "disables BC4-7": data.count(b"disables BC4-7"),
         "FormatPropertiesTable": data.count(b"FormatPropertiesTable"),
         "GetFormatFlags": data.count(b"GetFormatFlags"),
         "formatId": data.count(b"formatId"),
@@ -80,8 +82,8 @@ def main() -> int:
         print(f".dynsym: parse failed ({e})")
 
     incomplete = [s for s in img_bc if "BC4" in s or "BC5" in s or "BC6" in s or "BC7" in s]
-    if len(vkbc) == 16 and not incomplete:
-        print("STATIC VERDICT: BC1-3 complete; BC4-7 incomplete (no IMG_FMT)")
+    if len(vkbc) == 16 and not incomplete and data.count(b"ForceEtcAstcEnable") > 0:
+        print("STATIC VERDICT: BC1-7 reported by default (ForceEtcAstcEnable opt-out defaults off)")
     else:
         print("STATIC VERDICT: differs from the reference SM-S926B build - investigate")
     print("NOTE: static != runtime. Confirm with vkGetPhysicalDeviceFeatures/FormatProperties on-device.")

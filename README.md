@@ -60,14 +60,15 @@ One SM-S926B driver build (`vulkan.samsung.so`, 44,423,944 bytes, ELF AArch64):
 
 ## BCn texture compression
 
-Short version: no BC format is missing as a name (all 16 `VK_FORMAT_BC*`,
-131–146, plus all 14 internal `Bc*`), but the PAL backend only carries image
-formats for BC1–BC3 — `IMG_FMT_BC4/5/6/7` are absent, so BC4, BC5, BC6H and BC7
-are **incomplete** in this build. ETC2/ASTC map fully on both levels. The
-`textureCompressionBC` string is absent too, but so are all sibling feature
-names — this binary simply doesn't embed them, so runtime support can only be
-settled on-device (`vkGetPhysicalDeviceFeatures` + per-format
-`vkGetPhysicalDeviceFormatProperties`). Full evidence:
+Short version: all 16 `VK_FORMAT_BC*` (131–146) plus all 14 internal `Bc*` are
+present, and BC1–BC7 are **reported by default**. The proof is a debug switch,
+`ForceEtcAstcEnable` (default `false`), whose description states it *"forces
+reporting support of ASTC/ETC2 texture reads and disables BC4-7"* for IFH
+simulation mode only — a switch that turns BC4–7 off, off by default, confirms
+they are on otherwise. (`IMG_FMT_BC4–7` *names* are absent from the PAL
+strings, but that is a naming detail, not a support gap.) A runtime
+`vkGetPhysicalDeviceFeatures` check remains the gold standard, since per-app
+driver settings can override behavior. Full evidence:
 `driver-analysis/BCN_BC1-BC7.md`.
 
 ## Layout

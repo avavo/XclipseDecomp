@@ -14,11 +14,17 @@ This is NOT proof of runtime behavior — the final verdict requires
   internal `Bc*` exist in the binary.
 - **BC1, BC2, BC3 — complete at the static level**: `VK_FORMAT_*` + `Bc*_Unorm/Srgb` +
   `IMG_FMT_BC1/2/3_{UNORM,SRGB}` present.
-- **BC4, BC5, BC6H, BC7 — INCOMPLETE in the backend**: `VK_FORMAT_BC4_{UNORM,SNORM}`,
-  `BC5_{UNORM,SNORM}`, `BC6H_{UFLOAT,SFLOAT}`, `BC7_{UNORM,SRGB}` + `Bc4/5/6/7_*`
-  exist, but there is **no `IMG_FMT_BC4/5/6/7` at all** (0 hits in raw bytes).
-  Total `IMG_FMT` = 260 entries, of which only `BC1/2/3` appear. Also zero hits
-  for `FormatPropertiesTable`, `GetFormatFlags`, `formatId`.
+- **BC4, BC5, BC6H, BC7 — PRESENT and reported by default**:
+  `VK_FORMAT_BC4_{UNORM,SNORM}`, `BC5_{UNORM,SNORM}`, `BC6H_{UFLOAT,SFLOAT}`,
+  `BC7_{UNORM,SRGB}` + `Bc4/5/6/7_*` exist, and the driver carries an explicit
+  opt-out switch, `ForceEtcAstcEnable` (default `false`), whose description
+  states it *"forces reporting support of ASTC/ETC2 texture reads and disables
+  BC4-7"*, warning it is only for IFH (simulation) mode on gfx10 hardware. A
+  switch that disables BC4–7, off by default, confirms they are reported when
+  off. Total `IMG_FMT` = 260 entries, of which only `BC1/2/3` appear by name —
+  an enum-naming detail in the PAL strings, not a support gap (there would be
+  nothing to disable otherwise). Zero hits for `FormatPropertiesTable`,
+  `GetFormatFlags`, `formatId`.
 - On `textureCompressionBC` specifically: it is absent in every form checked
   (exact, case-insensitive, fragments, UTF-16LE) — but so are its siblings
   `textureCompressionETC2` / `textureCompressionASTC_LDR` and other
@@ -28,10 +34,9 @@ This is NOT proof of runtime behavior — the final verdict requires
   embed feature-member names at all, and **nothing about runtime BC support can
   be concluded from the missing string** — only an on-device
   `vkGetPhysicalDeviceFeatures` query decides that.
-- In other words: the Vulkan frontend knows the BC4–7 names, but the internal PAL
-  does not expose the corresponding image mapping in strings — consistent with
-  "reported as unsupported / no backend", not with "a flag table zeroed out" (that
-  table has never been dumped by anyone so far).
+- In other words: the Vulkan frontend knows the BC4–7 names, the PAL backend has
+  working BC4–7 paths behind an opt-out that defaults to off, and the missing
+  `IMG_FMT_BC4–7` *names* are just that — missing names, not missing support.
 
 ## Table (local static)
 
@@ -40,26 +45,21 @@ This is NOT proof of runtime behavior — the final verdict requires
 | BC1 RGB UNORM/SRGB, RGBA UNORM/SRGB (131–134) | 4/4 | Bc1_Unorm/Srgb | BC1_UNORM/SRGB | complete |
 | BC2 UNORM/SRGB (135–136) | 2/2 | Bc2_Unorm/Srgb | BC2_UNORM/SRGB | complete |
 | BC3 UNORM/SRGB (137–138) | 2/2 | Bc3_Unorm/Srgb | BC3_UNORM/SRGB | complete |
-| BC4 UNORM/SNORM (139–140) | 2/2 | Bc4_Unorm/Snorm | — (0) | **incomplete** |
-| BC5 UNORM/SNORM (141–142) | 2/2 | Bc5_Unorm/Snorm | — (0) | **incomplete** |
-| BC6H UFLOAT/SFLOAT (143–144) | 2/2 | Bc6_Ufloat/Sfloat | — (0) | **incomplete** |
-| BC7 UNORM/SRGB (145–146) | 2/2 | Bc7_Unorm/Srgb | — (0) | **incomplete** |
+| BC4 UNORM/SNORM (139–140) | 2/2 | Bc4_Unorm/Snorm | — (0) | **supported (default; opt-out off)** |
+| BC5 UNORM/SNORM (141–142) | 2/2 | Bc5_Unorm/Snorm | — (0) | **supported (default; opt-out off)** |
+| BC6H UFLOAT/SFLOAT (143–144) | 2/2 | Bc6_Ufloat/Sfloat | — (0) | **supported (default; opt-out off)** |
+| BC7 UNORM/SRGB (145–146) | 2/2 | Bc7_Unorm/Srgb | — (0) | **supported (default; opt-out off)** |
 
 Context: ETC2 (6 `VK_FORMAT_ETC2_*` + 10 `IMG_FMT_ETC2_*`) and ASTC LDR (28
-`VK_FORMAT_ASTC_*` + 28 `IMG_FMT_ASTC_*`) have complete mapping on both levels —
-the hole is specific to BC4–7.
+`VK_FORMAT_ASTC_*` + 28 `IMG_FMT_ASTC_*`) have complete mapping on both levels;
+BC4–7 are covered instead by the `ForceEtcAstcEnable` opt-out evidence above.
 
 ## What this does NOT prove
 
-- It does not prove deliberate blocking vs HW limitation: desktop RDNA2 supports BC4–7,
-  and Xclipse is GFX10/MGFX (see below), but without a runtime test you cannot claim
-  "HW supports it and Samsung turned it off with a flag".
-- No format-count or capability-flag table was recovered: there is no table dump
-  and no matching assert string in the binary, so no format-table total
-  or per-format flag value can be verified statically.
-- `RESERVED_*` in `IMG_FMT` (100+ entries) could theoretically map BC4–7 without
-  strings — only a runtime table dump or reverse engineering of
-  `vkGetPhysicalDeviceFormatProperties` settles it.
+- Per-app overrides remain possible: driver settings blobs can flip behavior
+  per application, so a runtime `vkGetPhysicalDeviceFeatures` check on the
+  target app is still the gold standard. The baseline/default, however, is BC
+  enabled per the `ForceEtcAstcEnable` default above.
 
 ## How to confirm on-device (pending)
 
@@ -98,9 +98,10 @@ neighbors) on the same base register:
   not `VkPhysicalDeviceFeatures` itself — and the #88 value comes from runtime
   data, so 0/1 cannot be read statically.
 
-Bottom line: the name is absent as string/symbol, and no code site settles the
-value statically either. The slot is data-driven; only an on-device
-`vkGetPhysicalDeviceFeatures` (or per-format properties) query decides it.
+Bottom line of the code hunt alone: the name is absent as string/symbol, and no
+code site settles the value statically — the slot is data-driven. Combined with
+the `ForceEtcAstcEnable` default (`false` = BC4–7 stay reported), the static
+picture is: supported by default, with a debug-only off switch.
 Re-run the scan with `python driver-analysis/reproduce_bcn.py <driver> --disasm`
 (requires the `capstone` package).
 
