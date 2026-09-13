@@ -45,9 +45,9 @@ the hole is specific to BC4–7.
 - It does not prove deliberate blocking vs HW limitation: desktop RDNA2 supports BC4–7,
   and Xclipse is GFX10/MGFX (see below), but without a runtime test you cannot claim
   "HW supports it and Samsung turned it off with a flag".
-- It does not prove the 221 formats or "capability flags = 0": those external-repo
-  claims have no table dump and no matching assert in the binary (0 hits here and
-  0 hits in their own `extracted_data`).
+- No format-count or capability-flag table was recovered: there is no table dump
+  and no matching assert string in the binary, so no format-table total
+  or per-format flag value can be verified statically.
 - `RESERVED_*` in `IMG_FMT` (100+ entries) could theoretically map BC4–7 without
   strings — only a runtime table dump or reverse engineering of
   `vkGetPhysicalDeviceFormatProperties` settles it.
@@ -63,8 +63,7 @@ for (VkFormat fmt = VK_FORMAT_BC1_RGB_UNORM_BLOCK; fmt <= VK_FORMAT_BC7_SRGB_BLO
 ```
 
 If `textureCompressionBC==VK_FALSE` and BC4–7 return 0, the block is real at
-runtime (regardless of mechanism). If they return features, HW+driver support
-them and the external "disabled" claim is wrong for this build.
+runtime (regardless of mechanism). If they return features, HW+driver support them.
 
 ## Other local .so findings relevant to BCn
 
@@ -72,8 +71,8 @@ them and the external "disabled" claim is wrong for this build.
   `MGFX1:gfx4010` … `MGFX4:gfx4040`. **No `GFX405`** in this build.
 - XGL/PAL confirmed: `drivers/xgl/icd/api/*.cpp`, `SCEmitter*`, `AMDVLK_ENABLE_DEVELOPING_EXT`,
   `AMD Vulkan Driver`, `Samsung::Vulkan::OpenDevice/CloseDevice`, `vulkan.samsung.so`.
-- `sgpu_query_soc_info` = 0 hits here (1 hit in the external dump — build difference).
+- `sgpu_query_soc_info` = 0 hits in this build.
   `sgpu_instance_data_destroy`, `amdgpu_bo_list_destroy_raw`, `amdgpu_cs_ctx_create3` = 1 hit.
-- `.dynsym` = 345 entries (344 non-empty), not 830+. `VK_*` = 398 strings (60+ extensions: OK).
+- `.dynsym` = 345 entries (344 non-empty). `VK_*` = 398 strings.
 - `Xclipse` only in "Xclipse GPU Fault"; no "Xclipse 940/920", no `0x73A0`, no "Exynos 2400"
   (only residual `exynos9810`). SoC IDs come from probes/JSON, not the `.so`.
