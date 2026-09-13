@@ -17,8 +17,17 @@ This is NOT proof of runtime behavior — the final verdict requires
 - **BC4, BC5, BC6H, BC7 — INCOMPLETE in the backend**: `VK_FORMAT_BC4_{UNORM,SNORM}`,
   `BC5_{UNORM,SNORM}`, `BC6H_{UFLOAT,SFLOAT}`, `BC7_{UNORM,SRGB}` + `Bc4/5/6/7_*`
   exist, but there is **no `IMG_FMT_BC4/5/6/7` at all** (0 hits in raw bytes).
-  Total `IMG_FMT` = 260 entries, of which only `BC1/2/3` appear. Also **zero hits**
-  for `textureCompressionBC`, `FormatPropertiesTable`, `GetFormatFlags`, `formatId`.
+  Total `IMG_FMT` = 260 entries, of which only `BC1/2/3` appear. Also zero hits
+  for `FormatPropertiesTable`, `GetFormatFlags`, `formatId`.
+- On `textureCompressionBC` specifically: it is absent in every form checked
+  (exact, case-insensitive, fragments, UTF-16LE) — but so are its siblings
+  `textureCompressionETC2` / `textureCompressionASTC_LDR` and other
+  `VkPhysicalDeviceFeatures` member names (`samplerAnisotropy`,
+  `shaderStorageImageMultisample`). The only `robustBufferAccess` hits are
+  shader-compiler option keys, not the features struct. So this binary does not
+  embed feature-member names at all, and **nothing about runtime BC support can
+  be concluded from the missing string** — only an on-device
+  `vkGetPhysicalDeviceFeatures` query decides that.
 - In other words: the Vulkan frontend knows the BC4–7 names, but the internal PAL
   does not expose the corresponding image mapping in strings — consistent with
   "reported as unsupported / no backend", not with "a flag table zeroed out" (that

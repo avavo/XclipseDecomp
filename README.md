@@ -1,39 +1,74 @@
-# XclipseDecomp — Xclipse 940 / Exynos 2400 driver notes & BCn analysis
+# XclipseDecomp — Xclipse 940 / Exynos 2400 driver notes
 
-Static-analysis notes on Samsung's proprietary Vulkan driver (`vulkan.samsung.so`)
-for the Xclipse 940 GPU (Exynos 2400): whether BC1–BC7 texture compression is
-present, missing, or incomplete, plus hardware and bring-up notes from on-device
-probes.
+On-device facts and static analysis on Samsung's Xclipse 940 GPU (Exynos 2400)
+and its proprietary Vulkan driver: hardware identity, bring-up results, a
+DMA-BUF import bug with its fix, and a BC1–BC7 texture-compression audit.
 
 No proprietary binaries are shipped here (MIT-licensed notes and scripts only).
 
-## Findings up front
+## Hardware
 
-**Hardware (from on-device probes, SM-S721B / SM-S926B).**
-SGPU on `/dev/dri/renderD128` (`samsung-sgpu`, `/sgpu@22200000`), display on a
-separate node. Family `147 (MGFX)`, device `0x73a0`, GFX 1×10.0, COMPUTE 1×10.0,
-12 CUs, DRM wavefront 32. Details in `docs/01-hardware-overview.md`.
+From on-device probes (SM-S721B / SM-S926B):
 
-**BCn support (static analysis of one SM-S926B driver build, 44,423,944 bytes).**
-No BC format is fully missing as a name — all 16 `VK_FORMAT_BC*` (Vulkan enum
-131–146) and all 14 internal `Bc*` identifiers are present. But the PAL backend
-only exposes image formats for BC1–BC3:
+- SoC hints: platform `erd9945`, hardware `s5e9945`, Android 16, kernel
+  `6.1.157-android14-11`, AArch64
+- GPU: family `147 (MGFX)`, device `0x73a0`, chip revision `0x02600200`
+  (the EVT0 source tree says `0x02600100` — kept separate until correlated)
+- SGPU render node `/dev/dri/renderD128` (`samsung-sgpu`, `/sgpu@22200000`);
+  display on a separate node
+- GFX 1×10.0 (rings `0xf`), COMPUTE 1×10.0 (rings `0x7`), DMA 0 rings;
+  12 active CUs, DRM wavefront 32 (the static Vulkan field says 64)
+- Firmware seen on the probe: SGPU `2.23.0`, RTL `0x4ea15`
 
-| Formats | Vulkan names | PAL `IMG_FMT_*` | Status |
-|---|---|---|---|
-| BC1 (131–134), BC2 (135–136), BC3 (137–138) | present | `BC1/2/3_UNORM/SRGB` present | complete |
-| BC4 (139–140), BC5 (141–142), BC6H (143–144), BC7 (145–146) | present | absent (0 hits) | **incomplete** |
+Details: `docs/01-hardware-overview.md`, `docs/03-device-tree-and-platform.md`,
+`logs/SM-S721B-firmware-and-gpu.txt`, `logs/SM-S721B-build-properties.txt`.
 
-`textureCompressionBC` is also absent as a string, and ETC2/ASTC have full
-mappings on both levels — the gap is specific to BC4–7. Static analysis cannot
-prove the runtime behavior; confirming requires `vkGetPhysicalDeviceFeatures`
-plus per-format `vkGetPhysicalDeviceFormatProperties` on-device. Full evidence
-in `driver-analysis/BCN_BC1-BC7.md`.
+## Bring-up results (SM-S926B, via ADB, no root, SELinux Enforcing)
 
-**Driver stack.** The binary confirms an AMD-based stack (XGL ICD paths, PAL
-symbols, shader-compiler `SCEmitterGFX40*` targets) with Samsung integration
-(Vulkan HAL open/close, SGR/gralloc interface, SBWC helper, amdgpu-derived
-kernel interface). 345 `.dynsym` entries, 398 `VK_*` strings.
+Validated 2026-09-06 (`logs/SM-S926B-2026-09-06-bringup-RESULTS.md`):
+
+- Native 64 KiB BO: GEM create, CPU write/read, VA map/unmap, cleanup — 10/10
+- DMA-BUF PRIME import, direct and via libdrm, on `system` / `system-uncached`
+  heaps, 64 KiB and 4 KiB — 10/10, plus VA map/unmap of imported BOs
+- Fresh context: syncobj create, CPU signal/wait, sync_file export/import,
+  timeout-after-reset semantics
+
+Explicitly out of scope of these probes: GPU command submission, GPU-produced
+fences, shader execution with GPU readback, and any Vulkan ICD integration.
+
+## Import bug and fix
+
+The supplied `test_standalone` probe called `amdgpu_bo_import` with type `1`,
+which the shipped `libdrm_sgpu` rejects before PRIME (`-1`); type `2` selects
+the DMA-BUF path. The old probe also undersized the output struct (8 bytes
+instead of 16) and zeroed its exit code even on failure. A from-source
+replacement probe with type `2`, a 16-byte result struct and immediate `errno`
+capture imports successfully on-device. Full disassembly-level analysis with
+hashes: `docs/LOCAL_FINDINGS.md`.
+
+## Driver stack (static)
+
+One SM-S926B driver build (`vulkan.samsung.so`, 44,423,944 bytes, ELF AArch64):
+
+- AMD-based stack: XGL ICD source paths, PAL symbols, shader-compiler
+  `SCEmitterGFX40/401/402/403/404` targets (`MGFX1–4`, no `GFX405`)
+- Samsung integration: Vulkan HAL open/close, SGR/gralloc interface (27 dynsym
+  symbols), SBWC helper, amdgpu-derived kernel interface
+  (`amdgpu_bo_list_destroy_raw`, `amdgpu_cs_ctx_create3`, …)
+- 345 `.dynsym` entries, 398 `VK_*` strings; `sgpu_instance_data_destroy`
+  present, `sgpu_query_soc_info` absent in this build
+
+## BCn texture compression
+
+Short version: no BC format is missing as a name (all 16 `VK_FORMAT_BC*`,
+131–146, plus all 14 internal `Bc*`), but the PAL backend only carries image
+formats for BC1–BC3 — `IMG_FMT_BC4/5/6/7` are absent, so BC4, BC5, BC6H and BC7
+are **incomplete** in this build. ETC2/ASTC map fully on both levels. The
+`textureCompressionBC` string is absent too, but so are all sibling feature
+names — this binary simply doesn't embed them, so runtime support can only be
+settled on-device (`vkGetPhysicalDeviceFeatures` + per-format
+`vkGetPhysicalDeviceFormatProperties`). Full evidence:
+`driver-analysis/BCN_BC1-BC7.md`.
 
 ## Layout
 
@@ -49,7 +84,7 @@ inventory/
   SOURCES.md             provenance of every file in this repo
 ```
 
-## Reproduce
+## Reproduce the static checks
 
 Pull the driver from your own device and run the script against that copy:
 
@@ -59,8 +94,7 @@ python driver-analysis/reproduce_bcn.py vulkan.samsung.so
 ```
 
 Expected output for the audited build: 16 `VK_FORMAT_BC*`, 14 `Bc*`,
-6 `IMG_FMT_BC1-3`, 0 `IMG_FMT_BC4-7`, 0 `textureCompressionBC`,
-0 `FormatPropertiesTable`, `.dynsym` 345 entries.
+6 `IMG_FMT_BC1-3`, 0 `IMG_FMT_BC4-7`, `.dynsym` 345 entries.
 
 ## Provenance & license
 
