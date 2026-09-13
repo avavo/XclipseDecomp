@@ -83,7 +83,7 @@ def main() -> int:
 
     incomplete = [s for s in img_bc if "BC4" in s or "BC5" in s or "BC6" in s or "BC7" in s]
     if len(vkbc) == 16 and not incomplete and data.count(b"ForceEtcAstcEnable") > 0:
-        print("STATIC VERDICT: BC1-7 reported by default (ForceEtcAstcEnable opt-out defaults off)")
+        print("STATIC VERDICT: BC1-7 reported by default (opt-out off); PAL IMG_FMT_BC4-7 names absent (incomplete)")
     else:
         print("STATIC VERDICT: differs from the reference SM-S926B build - investigate")
     print("NOTE: static != runtime. Confirm with vkGetPhysicalDeviceFeatures/FormatProperties on-device.")

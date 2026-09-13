@@ -14,17 +14,20 @@ This is NOT proof of runtime behavior — the final verdict requires
   internal `Bc*` exist in the binary.
 - **BC1, BC2, BC3 — complete at the static level**: `VK_FORMAT_*` + `Bc*_Unorm/Srgb` +
   `IMG_FMT_BC1/2/3_{UNORM,SRGB}` present.
-- **BC4, BC5, BC6H, BC7 — PRESENT and reported by default**:
+- **BC4, BC5, BC6H, BC7 — REPORTED by default, but PAL-side INCOMPLETE**:
   `VK_FORMAT_BC4_{UNORM,SNORM}`, `BC5_{UNORM,SNORM}`, `BC6H_{UFLOAT,SFLOAT}`,
   `BC7_{UNORM,SRGB}` + `Bc4/5/6/7_*` exist, and the driver carries an explicit
   opt-out switch, `ForceEtcAstcEnable` (default `false`), whose description
   states it *"forces reporting support of ASTC/ETC2 texture reads and disables
   BC4-7"*, warning it is only for IFH (simulation) mode on gfx10 hardware. A
   switch that disables BC4–7, off by default, confirms they are reported when
-  off. Total `IMG_FMT` = 260 entries, of which only `BC1/2/3` appear by name —
-  an enum-naming detail in the PAL strings, not a support gap (there would be
-  nothing to disable otherwise). Zero hits for `FormatPropertiesTable`,
-  `GetFormatFlags`, `formatId`.
+  off. At the same time, the PAL side is demonstrably incomplete: there are
+  **no `IMG_FMT_BC4/5/6/7` names at all** (0 hits in raw bytes; total `IMG_FMT`
+  = 260 entries, only `BC1/2/3` named, plus 100+ `RESERVED_*` slots of unknown
+  mapping). So apps are told BC4–7 exist, but the internal PAL format enum has
+  no named entries for them and the exact internal mapping path is undetermined
+  statically. Zero hits for `FormatPropertiesTable`, `GetFormatFlags`,
+  `formatId`.
 - On `textureCompressionBC` specifically: it is absent in every form checked
   (exact, case-insensitive, fragments, UTF-16LE) — but so are its siblings
   `textureCompressionETC2` / `textureCompressionASTC_LDR` and other
@@ -34,9 +37,9 @@ This is NOT proof of runtime behavior — the final verdict requires
   embed feature-member names at all, and **nothing about runtime BC support can
   be concluded from the missing string** — only an on-device
   `vkGetPhysicalDeviceFeatures` query decides that.
-- In other words: the Vulkan frontend knows the BC4–7 names, the PAL backend has
-  working BC4–7 paths behind an opt-out that defaults to off, and the missing
-  `IMG_FMT_BC4–7` *names* are just that — missing names, not missing support.
+- In other words: the Vulkan frontend reports BC4–7 (opt-out defaults to off),
+  but the PAL side stays incomplete — no named `IMG_FMT_BC4–7` entries, unknown
+  `RESERVED_*` mapping, undetermined internal path. Reported yet incomplete.
 
 ## Table (local static)
 
@@ -45,14 +48,15 @@ This is NOT proof of runtime behavior — the final verdict requires
 | BC1 RGB UNORM/SRGB, RGBA UNORM/SRGB (131–134) | 4/4 | Bc1_Unorm/Srgb | BC1_UNORM/SRGB | complete |
 | BC2 UNORM/SRGB (135–136) | 2/2 | Bc2_Unorm/Srgb | BC2_UNORM/SRGB | complete |
 | BC3 UNORM/SRGB (137–138) | 2/2 | Bc3_Unorm/Srgb | BC3_UNORM/SRGB | complete |
-| BC4 UNORM/SNORM (139–140) | 2/2 | Bc4_Unorm/Snorm | — (0) | **supported (default; opt-out off)** |
-| BC5 UNORM/SNORM (141–142) | 2/2 | Bc5_Unorm/Snorm | — (0) | **supported (default; opt-out off)** |
-| BC6H UFLOAT/SFLOAT (143–144) | 2/2 | Bc6_Ufloat/Sfloat | — (0) | **supported (default; opt-out off)** |
-| BC7 UNORM/SRGB (145–146) | 2/2 | Bc7_Unorm/Srgb | — (0) | **supported (default; opt-out off)** |
+| BC4 UNORM/SNORM (139–140) | 2/2 | Bc4_Unorm/Snorm | — (0) | **reported; PAL incomplete** |
+| BC5 UNORM/SNORM (141–142) | 2/2 | Bc5_Unorm/Snorm | — (0) | **reported; PAL incomplete** |
+| BC6H UFLOAT/SFLOAT (143–144) | 2/2 | Bc6_Ufloat/Sfloat | — (0) | **reported; PAL incomplete** |
+| BC7 UNORM/SRGB (145–146) | 2/2 | Bc7_Unorm/Srgb | — (0) | **reported; PAL incomplete** |
 
 Context: ETC2 (6 `VK_FORMAT_ETC2_*` + 10 `IMG_FMT_ETC2_*`) and ASTC LDR (28
 `VK_FORMAT_ASTC_*` + 28 `IMG_FMT_ASTC_*`) have complete mapping on both levels;
-BC4–7 are covered instead by the `ForceEtcAstcEnable` opt-out evidence above.
+BC4–7 are reported via the `ForceEtcAstcEnable` opt-out evidence above, yet keep
+an incomplete PAL enum (no named entries, unknown `RESERVED_*` mapping).
 
 ## What this does NOT prove
 

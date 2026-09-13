@@ -65,10 +65,10 @@ present, and BC1–BC7 are **reported by default**. The proof is a debug switch,
 `ForceEtcAstcEnable` (default `false`), whose description states it *"forces
 reporting support of ASTC/ETC2 texture reads and disables BC4-7"* for IFH
 simulation mode only — a switch that turns BC4–7 off, off by default, confirms
-they are on otherwise. (`IMG_FMT_BC4–7` *names* are absent from the PAL
-strings, but that is a naming detail, not a support gap.) A runtime
-`vkGetPhysicalDeviceFeatures` check remains the gold standard, since per-app
-driver settings can override behavior. Full evidence:
+they are on otherwise. At the same time BC4–BC7 stay **PAL-incomplete**:
+no `IMG_FMT_BC4–7` names exist and their internal mapping path is undetermined.
+A runtime `vkGetPhysicalDeviceFeatures` check remains the gold standard, since
+per-app driver settings can override behavior. Full evidence:
 `driver-analysis/BCN_BC1-BC7.md`.
 
 ## Layout
