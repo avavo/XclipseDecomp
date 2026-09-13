@@ -1,79 +1,79 @@
-# BCn no driver Xclipse (local SM-S926B) — BC1, BC2, BC3, BC4, BC5, BC6H, BC7
+# BCn in the Xclipse driver (local SM-S926B) — BC1, BC2, BC3, BC4, BC5, BC6H, BC7
 
-Pergunta: o driver tem BCn 1,2,3,4,5,6 e 7? Falta algum? Algum incompleto?
+Question: does the driver have BCn 1,2,3,4,5,6 and 7? Is any missing? Any incomplete?
 
-Método (estático, reproduzível): `python driver-analysis/reproduce_bcn.py <vulkan.samsung.so>`.
-Alvo auditado: `radv/vendor/vulkan.samsung.so`, 44.423.944 bytes, ELF AArch64.
-NÃO é prova de comportamento runtime — o veredito final exige
+Method (static, reproducible): `python driver-analysis/reproduce_bcn.py <vulkan.samsung.so>`.
+Audited target: `radv/vendor/vulkan.samsung.so`, 44,423,944 bytes, ELF AArch64.
+This is NOT proof of runtime behavior — the final verdict requires
 `vkGetPhysicalDeviceFeatures` (`textureCompressionBC`) +
-`vkGetPhysicalDeviceFormatProperties[2]` no aparelho.
+`vkGetPhysicalDeviceFormatProperties[2]` on the device.
 
-## Resposta curta
+## Short answer
 
-- **Nenhum BC some por completo como nome**: os 16 `VK_FORMAT_BC*` (131–146) e os 14
-  `Bc*` internos existem no binário.
-- **BC1, BC2, BC3 — completos no nível estático**: `VK_FORMAT_*` + `Bc*_Unorm/Srgb` +
-  `IMG_FMT_BC1/2/3_{UNORM,SRGB}` presentes.
-- **BC4, BC5, BC6H, BC7 — INCOMPLETOS no backend**: `VK_FORMAT_BC4_{UNORM,SNORM}`,
+- **No BC is fully missing as a name**: all 16 `VK_FORMAT_BC*` (131–146) and all 14
+  internal `Bc*` exist in the binary.
+- **BC1, BC2, BC3 — complete at the static level**: `VK_FORMAT_*` + `Bc*_Unorm/Srgb` +
+  `IMG_FMT_BC1/2/3_{UNORM,SRGB}` present.
+- **BC4, BC5, BC6H, BC7 — INCOMPLETE in the backend**: `VK_FORMAT_BC4_{UNORM,SNORM}`,
   `BC5_{UNORM,SNORM}`, `BC6H_{UFLOAT,SFLOAT}`, `BC7_{UNORM,SRGB}` + `Bc4/5/6/7_*`
-  existem, mas **não há nenhum `IMG_FMT_BC4/5/6/7`** (0 hits em bytes brutos).
-  `IMG_FMT` total = 260 entradas, das quais só `BC1/2/3` aparecem. Também **zero hits**
-  para `textureCompressionBC`, `FormatPropertiesTable`, `GetFormatFlags`, `formatId`.
-- Ou seja: o frontend Vulkan conhece os nomes BC4–7, mas o PAL interno não expõe o
-  mapeamento de imagem correspondente nas strings — compatível com “anunciado como
-  não suportado / sem backend”, não com “tabela de flags zerada” (essa tabela nunca
-  foi despejada por ninguém até aqui).
+  exist, but there is **no `IMG_FMT_BC4/5/6/7` at all** (0 hits in raw bytes).
+  Total `IMG_FMT` = 260 entries, of which only `BC1/2/3` appear. Also **zero hits**
+  for `textureCompressionBC`, `FormatPropertiesTable`, `GetFormatFlags`, `formatId`.
+- In other words: the Vulkan frontend knows the BC4–7 names, but the internal PAL
+  does not expose the corresponding image mapping in strings — consistent with
+  "reported as unsupported / no backend", not with "a flag table zeroed out" (that
+  table has never been dumped by anyone so far).
 
-## Tabela (estático local)
+## Table (local static)
 
-| Formato | VK_FORMAT_* | Bc* interno | IMG_FMT_* (PAL) | Veredito estático |
+| Format | VK_FORMAT_* | Internal Bc* | IMG_FMT_* (PAL) | Static verdict |
 |---|---|---|---|---|
-| BC1 RGB UNORM/SRGB, RGBA UNORM/SRGB (131–134) | 4/4 | Bc1_Unorm/Srgb | BC1_UNORM/SRGB | completo |
-| BC2 UNORM/SRGB (135–136) | 2/2 | Bc2_Unorm/Srgb | BC2_UNORM/SRGB | completo |
-| BC3 UNORM/SRGB (137–138) | 2/2 | Bc3_Unorm/Srgb | BC3_UNORM/SRGB | completo |
-| BC4 UNORM/SNORM (139–140) | 2/2 | Bc4_Unorm/Snorm | — (0) | **incompleto** |
-| BC5 UNORM/SNORM (141–142) | 2/2 | Bc5_Unorm/Snorm | — (0) | **incompleto** |
-| BC6H UFLOAT/SFLOAT (143–144) | 2/2 | Bc6_Ufloat/Sfloat | — (0) | **incompleto** |
-| BC7 UNORM/SRGB (145–146) | 2/2 | Bc7_Unorm/Srgb | — (0) | **incompleto** |
+| BC1 RGB UNORM/SRGB, RGBA UNORM/SRGB (131–134) | 4/4 | Bc1_Unorm/Srgb | BC1_UNORM/SRGB | complete |
+| BC2 UNORM/SRGB (135–136) | 2/2 | Bc2_Unorm/Srgb | BC2_UNORM/SRGB | complete |
+| BC3 UNORM/SRGB (137–138) | 2/2 | Bc3_Unorm/Srgb | BC3_UNORM/SRGB | complete |
+| BC4 UNORM/SNORM (139–140) | 2/2 | Bc4_Unorm/Snorm | — (0) | **incomplete** |
+| BC5 UNORM/SNORM (141–142) | 2/2 | Bc5_Unorm/Snorm | — (0) | **incomplete** |
+| BC6H UFLOAT/SFLOAT (143–144) | 2/2 | Bc6_Ufloat/Sfloat | — (0) | **incomplete** |
+| BC7 UNORM/SRGB (145–146) | 2/2 | Bc7_Unorm/Srgb | — (0) | **incomplete** |
 
-Contexto: ETC2 (6 `VK_FORMAT_ETC2_*` + 10 `IMG_FMT_ETC2_*`) e ASTC LDR (28
-`VK_FORMAT_ASTC_*` + 28 `IMG_FMT_ASTC_*`) têm mapeamento completo nos dois níveis —
-o buraco é específico de BC4–7.
+Context: ETC2 (6 `VK_FORMAT_ETC2_*` + 10 `IMG_FMT_ETC2_*`) and ASTC LDR (28
+`VK_FORMAT_ASTC_*` + 28 `IMG_FMT_ASTC_*`) have complete mapping on both levels —
+the hole is specific to BC4–7.
 
-## O que isso NÃO prova
+## What this does NOT prove
 
-- Não prova bloqueio deliberado vs limitação de HW: RDNA2 desktop suporta BC4–7, e o
-  Xclipse é GFX10/MGFX (ver abaixo), mas sem teste runtime não dá p/ afirmar “HW
-  suporta e Samsung desligou por flag”.
-- Não prova os 221 formatos nem “capability flags = 0”: essas afirmações do repo
-  externo não têm dump da tabela nem assert correspondente no binário (0 hits aqui e
-  0 hits nos próprios `extracted_data` deles).
-- `RESERVED_*` em `IMG_FMT` (100+ entradas) poderiam teoricamente mapear BC4–7 sem
-  strings — só um dump runtime da tabela ou engenharia do `vkGetPhysicalDeviceFormatProperties`
-  resolve.
+- It does not prove deliberate blocking vs HW limitation: desktop RDNA2 supports BC4–7,
+  and Xclipse is GFX10/MGFX (see below), but without a runtime test you cannot claim
+  "HW supports it and Samsung turned it off with a flag".
+- It does not prove the 221 formats or "capability flags = 0": those external-repo
+  claims have no table dump and no matching assert in the binary (0 hits here and
+  0 hits in their own `extracted_data`).
+- `RESERVED_*` in `IMG_FMT` (100+ entries) could theoretically map BC4–7 without
+  strings — only a runtime table dump or reverse engineering of
+  `vkGetPhysicalDeviceFormatProperties` settles it.
 
-## Como confirmar no aparelho (pendente)
+## How to confirm on-device (pending)
 
 ```c
 VkPhysicalDeviceFeatures f; vkGetPhysicalDeviceFeatures(phys, &f);
 // f.textureCompressionBC == VK_TRUE?
 for (VkFormat fmt = VK_FORMAT_BC1_RGB_UNORM_BLOCK; fmt <= VK_FORMAT_BC7_SRGB_BLOCK; fmt++)
   vkGetPhysicalDeviceFormatProperties(phys, fmt, &props);
-// checar props.optimalTilingFeatures & SAMPLED_IMAGE_BIT etc.
+// check props.optimalTilingFeatures & SAMPLED_IMAGE_BIT etc.
 ```
 
-Se `textureCompressionBC==VK_FALSE` e BC4–7 retornarem 0, o bloqueio é real no
-runtime (independentemente do mecanismo). Se retornarem features, o HW+driver
-suportam e o “disabled” externo está errado p/ este build.
+If `textureCompressionBC==VK_FALSE` and BC4–7 return 0, the block is real at
+runtime (regardless of mechanism). If they return features, HW+driver support
+them and the external "disabled" claim is wrong for this build.
 
-## Outros achados do .so local relevantes a BCn
+## Other local .so findings relevant to BCn
 
 - GFX: `SCEmitterGFX40/401/402/403/404`, `SCTargetInfoGFX40/401/402/403`,
-  `MGFX1:gfx4010` … `MGFX4:gfx4040`. **Sem `GFX405`** neste build.
-- XGL/PAL confirmados: `drivers/xgl/icd/api/*.cpp`, `SCEmitter*`, `AMDVLK_ENABLE_DEVELOPING_EXT`,
+  `MGFX1:gfx4010` … `MGFX4:gfx4040`. **No `GFX405`** in this build.
+- XGL/PAL confirmed: `drivers/xgl/icd/api/*.cpp`, `SCEmitter*`, `AMDVLK_ENABLE_DEVELOPING_EXT`,
   `AMD Vulkan Driver`, `Samsung::Vulkan::OpenDevice/CloseDevice`, `vulkan.samsung.so`.
-- `sgpu_query_soc_info` = 0 hits aqui (existe 1 hit no dump externo — diferença de build).
+- `sgpu_query_soc_info` = 0 hits here (1 hit in the external dump — build difference).
   `sgpu_instance_data_destroy`, `amdgpu_bo_list_destroy_raw`, `amdgpu_cs_ctx_create3` = 1 hit.
-- `.dynsym` = 345 entradas (344 não vazias), não 830+. `VK_*` = 398 strings (60+ extensões: OK).
-- `Xclipse` só em “Xclipse GPU Fault”; sem “Xclipse 940/920”, sem `0x73A0`, sem “Exynos 2400”
-  (só `exynos9810` residual). IDs de DaVinci vêm de probes/JSON, não do `.so`.
+- `.dynsym` = 345 entries (344 non-empty), not 830+. `VK_*` = 398 strings (60+ extensions: OK).
+- `Xclipse` only in "Xclipse GPU Fault"; no "Xclipse 940/920", no `0x73A0`, no "Exynos 2400"
+  (only residual `exynos9810`). SoC IDs come from probes/JSON, not the `.so`.

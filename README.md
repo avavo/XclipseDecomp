@@ -1,81 +1,84 @@
-# Xclipse 940 / Exynos 2400 — Arquivo privado
+# Xclipse 940 / Exynos 2400 — Private archive (public-safe)
 
-Bundle curado em 2026-09-13 a partir de `C:\Users\alvaro\Documents\radv` (origin `avavo/RadvXclipse`)
-+ análise estática de `vendor/vulkan.samsung.so` (SM-S926B, 44.423.944 bytes)
-+ auditoria de https://github.com/WearyConcern1165/xclipse-vulkan-decompiled
+Curated bundle built 2026-09-13 from `C:\Users\alvaro\Documents\radv` (origin `avavo/RadvXclipse`)
++ static analysis of `vendor/vulkan.samsung.so` (SM-S926B, 44,423,944 bytes)
++ audit of https://github.com/WearyConcern1165/xclipse-vulkan-decompiled
 
-> PRIVADO. Contém referência a blobs proprietários Samsung (`vulkan.samsung.so`,
-> `libdrm_sgpu.so`, snapshot kernel). NÃO tornar público sem remover/relicenciar.
-> Ver `../radv/vendor/README.md` e `../radv/source-analysis/license-inventory.md`.
+> This repo is currently **private by choice, not by necessity**.
+> It contains NO vendor binaries and NO raw proprietary dumps, so it CAN go
+> public later as-is. See `PUBLIC_SAFETY.md` + pre-flip checklist before changing
+> visibility. License: MIT for own docs/scripts (`LICENSE`); Samsung blobs are
+> referenced by hash/path only, never redistributed.
 
-## O que tem aqui
+## Contents
 
 ```text
-README.md                        este arquivo
-docs/                            cópias curadas do repo local
+README.md                        this file
+PUBLIC_SAFETY.md                 why this repo can go public + pre-flip checklist
+LICENSE                          MIT (own docs/scripts only)
+docs/                            curated copies from the local repo
   01-hardware-overview.md        SM-S721B r12s, erd9945/s5e9945, 0x73a0, fam 147, GFX/COMPUTE 10.0, 12 CUs, wave32
   03-device-tree-and-platform.md DT /sgpu@22200000
-  17-textures-and-images.md      doc base de texturas do repo local
-  LOCAL_FINDINGS.md              bug handle-type 1 vs 2, hashes ELF, limites
-logs/                            capturas hashes + 1 RESULTS
+  17-textures-and-images.md      base texture doc from the local repo
+  LOCAL_FINDINGS.md              handle-type 1 vs 2 bug, ELF hashes, limits (EN translation)
+logs/                            sanitized captures + 1 RESULTS (EN)
   SM-S926B-2026-09-06-bringup-RESULTS.md
   SM-S721B-build-properties.txt / firmware-and-gpu.txt / hashes.txt
 driver-analysis/
-  BCN_BC1-BC7.md                 resposta: BC1-7 faltam? incompletos?
-  EXTERNAL_REPO_AUDIT.md         o repo WearyConcern1165 é verdade?
-  reproduce_bcn.py               re-executa a análise de strings/ELF localmente
-  IMG_FMT-list-local.txt         260 IMG_FMT_* extraídos do .so local
-  local-dynsym.txt               344 símbolos .dynsym locais
-  local-bc-strings.txt / local-string-hits.txt  dumps brutos (verbosos)
+  BCN_BC1-BC7.md                 answer: are BC1-7 missing? incomplete?
+  EXTERNAL_REPO_AUDIT.md         is the WearyConcern1165 repo true?
+  reproduce_bcn.py               re-runs the local strings/ELF analysis
+  IMG_FMT-list-local.txt         260 IMG_FMT_* extracted from the local .so
+  local-dynsym.txt               344 local .dynsym symbols
 inventory/
-  SOURCES.md                     onde está cada coisa no repo original + o que NÃO foi copiado
+  SOURCES.md                     where everything lives in the original repo + what was NOT copied
 ```
 
-## Xclipse 940 / Exynos 2400 em 30 segundos (só o confirmado no seu repo)
+Note: the two verbose raw dumps (`local-bc-strings.txt`, `local-string-hits.txt`)
+were intentionally deleted — they carried large PAL JSON blobs. Reproduce them any
+time with `reproduce_bcn.py` against your private copy of the `.so`.
 
-- Alvo lab: SM-S721B (`r12s`), plataforma `erd9945`, hw `s5e9945`; SGPU em
-  `/dev/dri/renderD128` (`samsung-sgpu,samsung-sgpu`, `/sgpu@22200000`), display separado
-  em `renderD129`. GFX 1×10.0 rings `0xf`, COMPUTE 1×10.0 rings `0x7`, DMA 0.
-  Família `147 (MGFX)`, device `0x73a0`, chip `0x02600200` (EVT0 no fonte = `0x02600100`,
-  manter separado). 12 CUs, wave32 (DRM) vs 64 (campo estático Vulkan). Fonte:
-  `docs/01-hardware-overview.md` copiado aqui.
-- SM-S926B (S24+, Exynos 2400 / Xclipse 940): GEM/VA/import/sync CPU validados 2026-09-06;
-  CS/fence/readback, shader via submit próprio e NIR restrito validados 2026-09-07→12
-  (ver `PORT_STATUS.md` e `data/devices/SM-S926B/*` no repo original — NÃO copiados
-  integralmente aqui, ver `inventory/SOURCES.md`).
-- Driver: `/vendor/lib64/hw/vulkan.samsung.so` (local 44.423.944 bytes), `libdrm_sgpu.so`
-  (`8CE6C773…`), ICD carregado em SurfaceFlinger, Termux só vê llvmpipe. Bug clássico:
-  `test_standalone` passa `handle_type=1` onde a lib exige `2` p/ DMA-BUF.
+## Xclipse 940 / Exynos 2400 in 30 seconds (only what your repo confirms)
 
-## Criar o repo privado no GitHub (sem `gh`, 3 min)
+- Lab target: SM-S721B (`r12s`), platform `erd9945`, hw `s5e9945`; SGPU on
+  `/dev/dri/renderD128` (`samsung-sgpu,samsung-sgpu`, `/sgpu@22200000`), separate display
+  on `renderD129`. GFX 1x10.0 rings `0xf`, COMPUTE 1x10.0 rings `0x7`, DMA 0.
+  Family `147 (MGFX)`, device `0x73a0`, chip `0x02600200` (EVT0 in source = `0x02600100`,
+  keep separate). 12 CUs, wave32 (DRM) vs 64 (static Vulkan field). Source:
+  `docs/01-hardware-overview.md` copied here.
+- SM-S926B (S24+, Exynos 2400 / Xclipse 940): native GEM/VA/import/CPU sync validated 2026-09-06;
+  CS/fence/readback, self-submitted shader and restricted NIR validated 2026-09-07 to 12
+  (see `PORT_STATUS.md` and `data/devices/SM-S926B/*` in the original repo — NOT fully
+  copied here, see `inventory/SOURCES.md`).
+- Driver: `/vendor/lib64/hw/vulkan.samsung.so` (local 44,423,944 bytes), `libdrm_sgpu.so`
+  (`8CE6C773…`), ICD loaded in SurfaceFlinger, Termux only sees llvmpipe. Classic bug:
+  `test_standalone` passes `handle_type=1` where the lib requires `2` for DMA-BUF.
 
-`gh` não está instalado nesta máquina, então o push não foi feito automaticamente.
-O diretório atual já é um bundle pronto — basta:
+## Publishing to GitHub (why you don't see it yet)
 
-1. No GitHub web: New repository → nome sugerido `xclipse940-privado` → **Private** →
-   **NÃO** marcar add README/license (já existem arquivos). Create.
-2. No PowerShell, dentro desta pasta:
+This bundle exists only on your disk (`git remote -v` is empty) — nothing was ever
+pushed, which is why it is not on github.com. To create it:
+
+1. On GitHub web: New repository → name `xclipse940-privado` → **Private** →
+   do **NOT** check add README/license (files already exist). Create.
+2. In PowerShell, inside this folder:
 
 ```powershell
-git init
-git add .
-git commit -m "Arquivo privado Xclipse 940/Exynos 2400 + analise BCn + auditoria externa (2026-09-13)"
 git branch -M main
-git remote add origin https://github.com/<seu-user>/xclipse940-privado.git
+git remote add origin https://github.com/<your-user>/xclipse940-privado.git
 git push -u origin main
 ```
 
-3. Opcional (recomendado): ative push protection / secret scanning nas settings do repo.
-4. NÃO adicione `vendor/*.so` nem `SM-S926B-opensource/` (~2,5 GB) sem pensar em LFS/custo.
-   Este bundle traz só hashes/listas; use `inventory/SOURCES.md` p/ copiar os blobs
-   localmente se precisar (continuam privados).
+3. Later, to go public: re-run the checklist in `PUBLIC_SAFETY.md`, then GitHub
+   Settings → General → Danger Zone → Change visibility → Public. No history
+   rewrite needed.
 
-## Revalidar a análise BCn
+## Revalidating the BCn analysis
 
 ```powershell
 python .\driver-analysis\reproduce_bcn.py ..\radv\vendor\vulkan.samsung.so
 ```
 
-Saída esperada (build SM-S926B local): 16 `VK_FORMAT_BC*`, 14 `Bc*`, 6 `IMG_FMT_BC1-3`,
+Expected output (local SM-S926B build): 16 `VK_FORMAT_BC*`, 14 `Bc*`, 6 `IMG_FMT_BC1-3`,
 0 `IMG_FMT_BC4-7`, 0 `textureCompressionBC`, 0 `FormatPropertiesTable`.
-Detalhes em `driver-analysis/BCN_BC1-BC7.md`.
+Details in `driver-analysis/BCN_BC1-BC7.md`.

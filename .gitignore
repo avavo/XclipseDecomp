@@ -1,11 +1,11 @@
-# privado: blobs Samsung referenciados, nunca commitar sem querer
+# private: referenced Samsung blobs, never commit by accident
 *.so
 *.zip
 *.tzst
 *.pdf
 SM-S926B-opensource/
 build-*/
-# permite os .txt/.md/.py deste bundle (listas, hashes, docs)
+# allow this bundle's .txt/.md/.py (lists, hashes, docs)
 !driver-analysis/*.txt
 !driver-analysis/*.md
 !driver-analysis/*.py

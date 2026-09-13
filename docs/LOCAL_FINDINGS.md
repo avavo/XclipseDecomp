@@ -1,26 +1,27 @@
-# Achados locais e correções — 2026-09-06
+# Local findings and fixes — 2026-09-06
+# (EN translation of radv/radv-xclipse940/docs/LOCAL_FINDINGS.md; original is Portuguese)
 
-Atualização: [execução no SM-S926B](../../data/devices/SM-S926B/2026-09-06-bringup/RESULTS.md)
-confirmou importação corrigida, memória nativa, VA de BO importado e sync_file
-sinalizado por CPU. O texto abaixo preserva a análise anterior ao teste.
+Update: [run on SM-S926B](../../data/devices/SM-S926B/2026-09-06-bringup/RESULTS.md)
+confirmed fixed import, native memory, VA of imported BO and CPU-signalled sync_file.
+The text below preserves the pre-test analysis.
 
-Análise dos arquivos fornecidos, sem execução nova no telefone. Os endereços abaixo
-são endereços virtuais ELF, não offsets de arquivo. Os binários originais foram preservados.
+Analysis of the supplied files, with no new run on the phone. Addresses below
+are ELF virtual addresses, not file offsets. The original binaries were preserved.
 
-## Causa demonstrável do `amdgpu_bo_import = -1` no probe fornecido
+## Demonstrable cause of `amdgpu_bo_import = -1` in the supplied probe
 
-`../../radv_xclipse_s24_package/bin/test_standalone` resolve `amdgpu_bo_import`
-(string em `0xc3d`, ponteiro salvo em `0x50c4`) e faz a chamada:
+`../../radv_xclipse_s24_package/bin/test_standalone` resolves `amdgpu_bo_import`
+(string at `0xc3d`, pointer saved at `0x50c4`) and calls it:
 
 ```text
-0x5348  ldr x8, [x26, #0x808]   ; função amdgpu_bo_import
-0x5350  add x3, sp, #0x8        ; saída
-0x5354  ldr w2, [sp, #0x18]     ; FD do DMA-BUF
-0x5358  mov w1, #1              ; tipo incorreto
+0x5348  ldr x8, [x26, #0x808]   ; amdgpu_bo_import function
+0x5350  add x3, sp, #0x8        ; output
+0x5354  ldr w2, [sp, #0x18]     ; DMA-BUF FD
+0x5358  mov w1, #1              ; wrong type
 0x5360  blr x8
 ```
 
-Na `../../libdrm_sgpu.so` fornecida:
+In the supplied `../../libdrm_sgpu.so`:
 
 ```text
 0x10868  mov w23, w1
@@ -35,87 +36,87 @@ Na `../../libdrm_sgpu.so` fornecida:
 0x10a2c  mov w0, w26
 ```
 
-O tipo `1` é rejeitado antes de PRIME. O tipo `2` seleciona o caminho DMA-BUF.
-Portanto, **a falha deste par de binários não demonstra que o exporter, heap,
-metadata ou alinhamento foram rejeitados pelo kernel**. Não se pode estender essa
-conclusão a todas as execuções históricas sem identificar os hashes usados nelas.
+Type `1` is rejected before PRIME. Type `2` selects the DMA-BUF path.
+Therefore, **this binary pair's failure does not show that the exporter, heap,
+metadata or alignment were rejected by the kernel**. Do not extend that
+conclusion to all historical runs without identifying the hashes used there.
 
-Há outro detalhe de ABI: em `0x10b38`, `stp x25, x8, [x20]` escreve dois campos
-de 64 bits, handle e tamanho. O probe antigo fornece uma região de saída de 8 bytes
-em `sp+8`; o segundo campo sobrepõe os 8 bytes seguintes usados pela alocação DMA.
-O substituto usa uma estrutura de 16 bytes com verificação de tamanho/offset.
+Another ABI detail: at `0x10b38`, `stp x25, x8, [x20]` writes two 64-bit fields,
+handle and size. The old probe supplies an 8-byte output region at `sp+8`;
+the second field overlaps the next 8 bytes used by the DMA allocation.
+The replacement uses a 16-byte struct with size/offset checks.
 
-O fluxo antigo também termina em `0x548c` zerando o código de saída mesmo após
-falha de importação e imprime uma mensagem de sucesso. O novo probe considera
-falhas de importação, validação e cleanup no resultado final.
+The old flow also ends at `0x548c` zeroing the exit code even after an import
+failure and prints a success message. The new probe folds import, validation
+and cleanup failures into the final result.
 
-`sgpu-import-probe` reconstrói o teste a partir de fonte, com tipo `2`, saída de
-16 bytes, `errno` capturado imediatamente e liberação dos recursos. Não modifica
-o binário antigo nem a biblioteca Samsung. O tamanho padrão é 64 KiB; `--size 4096`
-permite reproduzir o tamanho do teste antigo com o tipo corrigido.
+`sgpu-import-probe` rebuilds the test from source, with type `2`, 16-byte output,
+immediately captured `errno` and resource release. It does not modify the old
+binary or the Samsung library. Default size is 64 KiB; `--size 4096`
+reproduces the old test size with the fixed type.
 
-Isso corrige um defeito estático confirmado. **Importação bem-sucedida no aparelho
-ainda precisa ser demonstrada**: tipo `2` também passa por PRIME, `lseek` e código
-interno da biblioteca. `sgpu-memory-probe --heap ...` isola PRIME diretamente, sem
-depender do namespace que carrega a biblioteca vendor.
+This fixes a confirmed static defect. **Successful on-device import still needs
+to be demonstrated**: type `2` also goes through PRIME, `lseek` and the library's
+internal code. `sgpu-memory-probe --heap ...` isolates PRIME directly, without
+depending on the namespace that loads the vendor library.
 
-## Memória: evidência além do resumo antigo
+## Memory: evidence beyond the old summary
 
-`../../probe_SM-S721B.txt:32` registra `GEM_CREATE`, `mmap+touch`, `VA_MAP`,
-`VA_UNMAP` e `GEM_CLOSE` com sucesso. O mesmo log informa duas consultas falhas
-(`DRM_VERSION`/EFAULT e `SGPU_KMD_VERSION`/EINVAL); não é um teste inteiramente verde.
-Ele comprova uma sequência CPU/VM registrada, não acesso GPU, caches ou submissão.
+`../../probe_SM-S721B.txt:32` records `GEM_CREATE`, `mmap+touch`, `VA_MAP`,
+`VA_UNMAP` and `GEM_CLOSE` succeeding. The same log reports two failed queries
+(`DRM_VERSION`/EFAULT and `SGPU_KMD_VERSION`/EINVAL); it is not a fully green test.
+It proves a logged CPU/VM sequence, not GPU access, caches or submission.
 
-O novo código usa diretamente o `sgpu_drm.h` da árvore Samsung fornecida:
+The new code uses Samsung's supplied `sgpu_drm.h` directly:
 
 `../../SM-S926B/SM-S926B_16_Opensource/Kernel/kernel/include/uapi/drm/sgpu_drm.h`
 
-Na mesma árvore, `drivers/gpu/drm/samsung/gpu/sgpu/amdgpu_kms.c:1352` registra
-`AMDGPU_GEM_CREATE`, e `amdgpu_gem.c` implementa criação GTT e map/unmap.
-O kernel exige GTT na alocação; o probe pede GTT com acesso CPU, sem secure ou metadata.
-Os requests são gerados pelos macros do header, não copiados de uma versão desktop.
+In the same tree, `drivers/gpu/drm/samsung/gpu/sgpu/amdgpu_kms.c:1352` logs
+`AMDGPU_GEM_CREATE`, and `amdgpu_gem.c` implements GTT creation and map/unmap.
+The kernel requires GTT on allocation; the probe asks GTT with CPU access, no secure or metadata.
+Requests are generated by the header macros, not copied from a desktop version.
 
-A origem SM-S926B não garante correspondência exata com o kernel do SM-S721B.
-Os hashes do header e do build ficam registrados; nova validação no aparelho é necessária.
+The SM-S926B origin does not guarantee an exact match with the SM-S721B kernel.
+Header and build hashes are logged; revalidation on-device is required.
 
-O teste nativo usa um novo FD/VM e um único BO de 64 KiB, endereço derivado de
-DEV_INFO com validação de alinhamento, intervalo e overflow. Valida o nome DRM
-`sgpu` e, antes de alocar, família `147` e device `0x73a0`. Não é um alocador de
-VA para múltiplos BOs nem um winsys RADV completo. Map bem-sucedido não comprova
-que a GPU leu/escreveu as páginas. Não existe teste de coerência GPU neste probe.
+The native test uses a fresh FD/VM and a single 64 KiB BO, address derived from
+DEV_INFO with alignment, range and overflow validation. It validates the DRM name
+`sgpu` and, before allocating, family `147` and device `0x73a0`. It is not a VA
+allocator for multiple BOs nor a complete RADV winsys. A successful map does not prove
+the GPU read/wrote the pages. There is no GPU coherency test in this probe.
 
-## Identidade e wavefront
+## Identity and wavefront
 
-| Campo | Captura bruta | Uso no código |
+| Field | Raw capture | Use in code |
 | --- | --- | --- |
-| Vulkan vendor | `vkjson-1.txt`: 5197 = `0x144d` | Identificação da captura stock |
-| Vulkan device | `vkjson-1.txt:4287`: 39846400 = `0x02600200` | Corrige o antigo `0x02600000` |
-| DRM device/família | `probe_SM-S721B.txt`: `0x73a0` / `147` | Seleção DRM separada |
-| Wavefront stock | `vkjson-1.txt:32`: 64 | Campo estático Vulkan |
-| Wavefront DRM | `probe_SM-S721B.txt:6`: 32 | Campo separado, observado |
+| Vulkan vendor | `vkjson-1.txt`: 5197 = `0x144d` | Stock capture ID |
+| Vulkan device | `vkjson-1.txt:4287`: 39846400 = `0x02600200` | Fixes old `0x02600000` |
+| DRM device/family | `probe_SM-S721B.txt`: `0x73a0` / `147` | Separate DRM selection |
+| Stock wavefront | `vkjson-1.txt:32`: 64 | Static Vulkan field |
+| DRM wavefront | `probe_SM-S721B.txt:6`: 32 | Separate, observed field |
 
-Nenhum desses valores, sozinho, escolhe um alvo ACO nem comprova compatibilidade ISA.
-Os testes comparam a seleção Vulkan do código diretamente com o JSON fornecido.
+None of these values alone picks an ACO target or proves ISA compatibility.
+The tests compare the code's Vulkan selection directly against the supplied JSON.
 
-## Artefatos exatos auditados
+## Exact audited artifacts
 
-| Arquivo | SHA-256 |
+| File | SHA-256 |
 | --- | --- |
 | `libdrm_sgpu.so` | `8CE6C7735DED02D05D2F19998BC64EFCE65F20A42F38773845DA342DA8021373` |
 | `radv_xclipse_s24_package/bin/test_standalone` | `259925A6975D8E280466901A97EB0FE32AFFA19758C24F73C08E6FD4DFBC9C6E` |
 | `probe_SM-S721B.txt` | `1ECA1098B609B158DE7EEDD0229E88251DB30F8BDA104BFD3B4DD1D9DED5972A` |
 | `vkjson-1.txt` | `91DA1E4CE7712F113A08A39FE8B235E0AA2FD38D19DD0C35C3FAD170DA6894B3` |
 
-`tests/test_legacy_import.py` verifica hashes, arquitetura ELF e instruções
-relevantes. Não executa nem emula código vendor.
+`tests/test_legacy_import.py` checks hashes, ELF arch and relevant instructions.
+It does not run or emulate vendor code.
 
-## Limite deste avanço
+## Limit of this step
 
-Agora há código compilável para repetir memória nativa e isolar importação direta
-e via libdrm. Ainda faltam execução desses novos binários no aparelho, CS/fence,
-compute com readback GPU e integração à árvore fonte exata Mesa/RADV. As bibliotecas
-RADV empacotadas não substituem essa árvore fonte nem comprovam resultados no Eden.
+There is now buildable code to replay native memory and isolate direct import
+and via libdrm. Still missing: running these new binaries on-device, CS/fence,
+compute with GPU readback and integration with the exact Mesa/RADV source tree.
+The packaged RADV libraries do not replace that source tree nor prove Eden results.
 
-Após a execução no SM-S926B, memória, importação, VA de BO importado, contexto e
-sync_file CPU passaram. O contrato UAPI para a próxima etapa está em
-[CS_BRINGUP.md](CS_BRINGUP.md); nenhum submit foi feito nesta sessão.
+After the SM-S926B run, memory, import, VA of imported BO, context and
+CPU sync_file passed. The UAPI contract for the next step is in
+[CS_BRINGUP.md](CS_BRINGUP.md); no submit was done in that session.
