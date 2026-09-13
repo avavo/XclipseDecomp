@@ -1,0 +1,18 @@
+# Sanitized device identity extracted from supplied evidence
+MODEL=SM-S721B
+DEVICE=r12s
+PLATFORM=erd9945
+HARDWARE=s5e9945
+ANDROID_RELEASE=16
+KERNEL=6.1.157-android14-11
+ARCH=aarch64
+RO_HARDWARE_EGL=samsung
+RO_HARDWARE_VULKAN=samsung
+RO_HWUI_USE_VULKAN=true
+RO_SYS_KERNELMEMORY_GMR_VENDOR_PLUGIN=sgpu
+ROOT_CONTEXT=u:r:ksu:s0
+SELINUX_AFTER_COLLECTION=Enforcing
+
+# Provenance
+# Source: supplied logs/logs para tentativa radv_xclipse.zip and XCLIPSE940_PROBE_FINAL.zip
+# This file intentionally excludes device serials, credentials, memory contents, and private identifiers.

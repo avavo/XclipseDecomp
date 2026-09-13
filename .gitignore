@@ -1,0 +1,14 @@
+# privado: blobs Samsung referenciados, nunca commitar sem querer
+*.so
+*.zip
+*.tzst
+*.pdf
+SM-S926B-opensource/
+build-*/
+# permite os .txt/.md/.py deste bundle (listas, hashes, docs)
+!driver-analysis/*.txt
+!driver-analysis/*.md
+!driver-analysis/*.py
+!docs/*.md
+!logs/*
+!inventory/*.md

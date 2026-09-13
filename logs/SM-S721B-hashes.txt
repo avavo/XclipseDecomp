@@ -1,0 +1,11 @@
+# SHA-256 inventory of selected supplied artifacts
+# Generated 2026-09-05 from the downloaded Quick Share archive and extracted evidence.
+
+cd73e2fa24ac083b9babf243b39772065b060abc9cd30fb476acabe74433e67f  [archive] Tudo sobre a xclipse.zip
+
+# The nested continuity package included its own inventory at:
+# pacote_caminho_RADV/INVENTARIO_SHA256.txt
+# That file is preserved outside Git with the original evidence set.
+
+# Selected extracted text/binary artifacts will be added here only after any future
+# re-fetch or transformation; do not treat filenames as a license grant.
