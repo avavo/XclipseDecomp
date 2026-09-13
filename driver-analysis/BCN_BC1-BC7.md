@@ -106,6 +106,10 @@ Bottom line of the code hunt alone: the name is absent as string/symbol, and no
 code site settles the value statically — the slot is data-driven. Combined with
 the `ForceEtcAstcEnable` default (`false` = BC4–7 stay reported), the static
 picture is: supported by default, with a debug-only off switch.
+Correction history (2026-09-13 re-audit): the ForceEtcAstcEnable entry already
+existed in older on-device string captures, but its link to the BC question was
+only made then; the verdict was corrected from PAL-incomplete to
+reported-by-default-yet-PAL-incomplete accordingly.
 Re-run the scan with `python driver-analysis/reproduce_bcn.py <driver> --disasm`
 (requires the `capstone` package).
 

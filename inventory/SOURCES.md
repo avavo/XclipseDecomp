@@ -15,6 +15,9 @@ hashes) are committed here — never the binary.
 - `logs/SM-S926B-2026-09-06-bringup-RESULTS.md` — bring-up results
   (English translation of the original report)
 - `logs/SM-S721B-*` — sanitized identity/firmware/hash summaries
+- `logs/XLIA-2026-09-12-vulkan-apps.md` — per-app Vulkan feature masks from an
+  on-device capture (sanitized aggregates only)
+- `logs/s5e9945-g3d-dvfs.md` — G3D DVFS table from a second s5e9945 unit
 - `driver-analysis/BCN_BC1-BC7.md`, `reproduce_bcn.py` — written for this repo
   from the static analysis described inside them
 - `driver-analysis/IMG_FMT-list-local.txt` — 260 `IMG_FMT_*` names extracted from

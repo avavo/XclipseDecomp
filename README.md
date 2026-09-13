@@ -53,8 +53,9 @@ One SM-S926B driver build (`vulkan.samsung.so`, 44,423,944 bytes, ELF AArch64):
 - AMD-based stack: XGL ICD source paths, PAL symbols, shader-compiler
   `SCEmitterGFX40/401/402/403/404` targets (`MGFX1–4`, no `GFX405`)
 - Samsung integration: Vulkan HAL open/close, SGR/gralloc interface (27 dynsym
-  symbols), SBWC helper, amdgpu-derived kernel interface
-  (`amdgpu_bo_list_destroy_raw`, `amdgpu_cs_ctx_create3`, …)
+  symbols), SBWC helper, amdgpu-derived kernel interface; the companion libdrm additionally
+  exposes Samsung-only sgpu_cs_submit(_raw), sgpu_cs_ctx_override_priority and
+  sgpu_cs_query_reset_state, absent from the Vulkan .so itself (which carries the amdgpu_bo_* / amdgpu_cs_* family).
 - 345 `.dynsym` entries, 398 `VK_*` strings; `sgpu_instance_data_destroy`
   present, `sgpu_query_soc_info` absent in this build
 
