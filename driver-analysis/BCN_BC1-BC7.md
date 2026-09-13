@@ -74,6 +74,36 @@ for (VkFormat fmt = VK_FORMAT_BC1_RGB_UNORM_BLOCK; fmt <= VK_FORMAT_BC7_SRGB_BLO
 If `textureCompressionBC==VK_FALSE` and BC4–7 return 0, the block is real at
 runtime (regardless of mechanism). If they return features, HW+driver support them.
 
+## Disassembly: hunting the BC feature slot (AArch64, capstone)
+
+Since the name never appears as a string, the `.text` segment was disassembled
+for real (`STR Wt,[Xn,#88]` = struct offset of the BC flag inside a
+`VkPhysicalDeviceFeatures`-shaped struct, plus `STP`/`STR Xt` variants), and
+every site was checked for sibling-offset stores (80/84/92 = ETC2/ASTC/BC
+neighbors) on the same base register:
+
+- 496 `STR W,#88` sites, 0 `STP #88`, 0 `STR X,#88`. Offset 88 is common to many
+  structs, so most sites are unrelated whole-struct copies (`ldrb` loops),
+  zero-fills, or mixed u32/u8 structs.
+- 22 sites sit in functions that also store to 80/84/92 on the same base. None
+  is unambiguously the Vulkan features fill.
+- Closest candidate, at `0x1455578`: 15 consecutive u32 stores to one base at
+  offsets 64…120 with per-field loads — the same shape as features 16…30 —
+  including the BC slot sourced from a runtime table:
+  `ldr w8, [x24, #0xeb0]` → `[x19,#0x50]` (80),
+  `ldr w8, [x24, #0xf0c]` → `[x19,#0x54]` (84),
+  `ldr w8, [x23, #0x8e0]` → `[x19,#0x58]` (88).
+  But the same function also writes byte fields (`0x84`, `0x8c`–`0x8e`,
+  `0x92`–`0x93`) and far offsets (`0xc9c`), so it is a mixed internal struct,
+  not `VkPhysicalDeviceFeatures` itself — and the #88 value comes from runtime
+  data, so 0/1 cannot be read statically.
+
+Bottom line: the name is absent as string/symbol, and no code site settles the
+value statically either. The slot is data-driven; only an on-device
+`vkGetPhysicalDeviceFeatures` (or per-format properties) query decides it.
+Re-run the scan with `python driver-analysis/reproduce_bcn.py <driver> --disasm`
+(requires the `capstone` package).
+
 ## Other local .so findings relevant to BCn
 
 - GFX: `SCEmitterGFX40/401/402/403/404`, `SCTargetInfoGFX40/401/402/403`,

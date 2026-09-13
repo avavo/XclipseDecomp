@@ -1,13 +1,16 @@
 """Static BCn/ELF checks for Samsung's Xclipse Vulkan driver.
 
 Usage:
-    python reproduce_bcn.py <path/to/vulkan.samsung.so>
+    python reproduce_bcn.py <path/to/vulkan.samsung.so> [--disasm]
 
 Pull the driver from your own device first, e.g.:
     adb pull /vendor/lib64/hw/vulkan.samsung.so
 
 Output: BC1-BC7 name counts, PAL IMG_FMT coverage, and the key
 presence/absence checks behind driver-analysis/BCN_BC1-BC7.md.
+With --disasm (requires the `capstone` package): disassembles .text for
+stores to the BC feature slot (struct offset 88) with sibling-offset
+clustering, as described in the Disassembly section of BCN_BC1-BC7.md.
 """
 import re
 import struct
@@ -82,7 +85,59 @@ def main() -> int:
     else:
         print("STATIC VERDICT: differs from the reference SM-S926B build - investigate")
     print("NOTE: static != runtime. Confirm with vkGetPhysicalDeviceFeatures/FormatProperties on-device.")
+    if "--disasm" in sys.argv[2:]:
+        disasm_scan(data, secs)
     return 0
+
+
+def disasm_scan(data: bytes, secs) -> None:
+    """Hunt stores to struct offset 88 (BC feature slot) in .text."""
+    try:
+        from capstone import Cs, CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN
+    except ImportError:
+        print("disasm: capstone not installed (pip install capstone)")
+        return
+    t_off = t_sz = t_va = None
+    # largest executable PROGBITS section (.text)
+    for (n, t, fl, addr, off, sz, _lnk, _inf, _al, _esz) in secs:
+        if t == 1 and (fl & 0x4) and (t_off is None or sz > t_sz):
+            t_off, t_sz, t_va = off, sz, addr
+    if t_off is None:
+        print("disasm: no executable section found")
+        return
+    seg = data[t_off:t_off + t_sz]
+    sites = []
+    for m in re.finditer(rb"(?=(.[\x58-\x5b]\x00\xb9))", seg):
+        o = m.start()
+        if (t_off + o) % 4 != 0:
+            continue
+        w = struct.unpack("<I", seg[o:o + 4])[0]
+        if (w & 0xBFC00000) == 0xB9000000 and ((w >> 10) & 0xFFF) == 22:
+            sites.append(o)
+    print(f"disasm: STR W,#88 sites: {len(sites)}")
+    md = Cs(CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN)
+    clusters = 0
+    for o in sites:
+        lo = max(0, o - 512)
+        insns = list(md.disasm(seg[lo:o + 512], t_va + lo))
+        idx = {ins.address: i for i, ins in enumerate(insns)}
+        site_va = t_va + o
+        if site_va not in idx:
+            continue
+        si = idx[site_va]
+        site_op = insns[si].op_str
+        base = site_op.split("[", 1)[1].split(",")[0].strip()
+        offs = set()
+        for ins in insns:
+            if ins.mnemonic == "str" and ins.op_str.startswith("w"):
+                mem = ins.op_str.split("[", 1)[1] if "[" in ins.op_str else ""
+                mm = re.match(r"\s*(x\d+)(?:\s*,\s*#?(0x[0-9a-f]+|\d+))?", mem)
+                if mm and mm.group(1) == base and mm.group(2) is not None:
+                    offs.add(int(mm.group(2), 0))
+        if {80, 84, 88} <= offs:
+            clusters += 1
+            print(f"disasm: cluster base={base} va={site_va:#x} offsets={sorted(o for o in offs if 64 <= o <= 120)}")
+    print(f"disasm: {clusters} sibling-cluster sites (see BCN_BC1-BC7.md for analysis)")
 
 
 if __name__ == "__main__":
