@@ -1,9 +1,5 @@
 # Xclipse 940 / Exynos 2400 — Private archive (public-safe)
 
-Curated bundle built 2026-09-13 from `C:\Users\alvaro\Documents\radv` (origin `avavo/RadvXclipse`)
-+ static analysis of `vendor/vulkan.samsung.so` (SM-S926B, 44,423,944 bytes)
-+ audit of https://github.com/WearyConcern1165/xclipse-vulkan-decompiled
-
 > This repo is currently **private by choice, not by necessity**.
 > It contains NO vendor binaries and NO raw proprietary dumps, so it CAN go
 > public later as-is. See `PUBLIC_SAFETY.md` + pre-flip checklist before changing
